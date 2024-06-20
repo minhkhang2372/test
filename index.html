@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API Test</h1>
+    <button id="testApiButton">Test API</button>
+    <pre id="apiResponse"></pre>
+
+    <script>
+        document.getElementById('testApiButton').addEventListener('click', async () => {
+            try {
+                const response = await fetch('http://localhost:3000/shopeexu');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+                document.getElementById('apiResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('apiResponse').textContent = `Error: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>
