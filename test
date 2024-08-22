@@ -1,0 +1,194 @@
+
+
+
+import asyncio
+import re
+import json
+import time
+from urllib.parse import urlparse
+import aiohttp
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
+
+# Session toàn cục cho aiohttp
+session = None
+
+async def get_session():
+    global session
+    if session is None:
+        session = aiohttp.ClientSession(headers={
+
+                # Thêm các header của bạn ở đây
+       'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'accept-language': 'vi',
+    'cache-control': 'max-age=0',
+    'cookie': '__LOCALE__null=VN; csrftoken=qxk0XvFKHpXpw5BtpM5jgNjJF2EtvCPr; _gcl_au=1.1.1061772907.1721244197; _sapid=7645ece8535f748eab988232edab51eaeaadad72f870c7d6ffcb794b; _QPWSDCXHZQA=a66c1b17-375a-4210-bd7f-622e8cfa459d; REC7iLP4Q=adb093af-0852-4cc9-8fd9-bb96419c35ce; _fbp=fb.1.1721244197660.816249891653808614; SPC_SI=aT6XZgAAAABEV2N0VFV2SU00EgAAAAAAZmNFOG8yV2k=; SPC_SEC_SI=v1-bFNwcHIyQ2d2UzlvWU9XcZLBviaf5Qj9jy2ODxXcaPmvEQHMRMDk5NZDQuMNY/nsngd94beJvBBaKHs+le7/iE6hd1cIyqmUI/fYgwq9Zww=; SPC_R_T_IV=RkdDRlVoaUtMQ1VjYlRJMQ==; SPC_T_ID=lrMe/OIrCTCPboscY5jQZC7Ri50o+6lJwkcZBnq+G08iSMe1dDdU0WyzHJiUPqNPmv48Ds4qux/Nw730KMi2uIt/R9ObFisMtT62rdSA8C47TlmygqzIT/MRsriePPZFLZJSaf0fO/g2IdcNKsn8QcNS1+Vj1vl4iEhgHIF8rgo=; SPC_T_IV=RkdDRlVoaUtMQ1VjYlRJMQ==; SPC_F=7oS4o4C01NKit2JxpAbFcWzutA8rYM3S; REC_T_ID=04b19393-4472-11ef-98c5-fa197be053b6; SPC_R_T_ID=lrMe/OIrCTCPboscY5jQZC7Ri50o+6lJwkcZBnq+G08iSMe1dDdU0WyzHJiUPqNPmv48Ds4qux/Nw730KMi2uIt/R9ObFisMtT62rdSA8C47TlmygqzIT/MRsriePPZFLZJSaf0fO/g2IdcNKsn8QcNS1+Vj1vl4iEhgHIF8rgo=; shopee_webUnique_ccd=BPw1Y%2F8Js7emqMh1dsO1JQ%3D%3D%7CxvOQWD6SLsi%2FrVozd1rQLmcngK%2BmnVkclvshRnWvRkd6K6TXP1RuqhEQiqm4y7syG5rBT947Ny0LWQ%3D%3D%7CYG6XHGp0JqEzAuYm%7C08%7C3; ds=25de9aea6de7a763c72641c83b94483e; _ga_4GPP1ZXG63=GS1.1.1721244198.1.0.1721244198.60.0.0; AMP_TOKEN=%24NOT_FOUND; _ga=GA1.2.142138945.1721244199; _gid=GA1.2.325774416.1721244199; _dc_gtm_UA-61914164-6=1; SPC_EC=.cGt6VDdQM0RYTk1UZ2RINJ8yHa9qrt6KuoLeuwvF9kzEj49hPquHPvdk2cdgAp448pNM8k/MRf1dHWJhxRxtLqderZoAXXI8OEQ24GdQ8iT6v3Jz/7D8G4Gc681j2jJBe7sEjopS07b6RUqVOGGp4kJG5sjeDlszqHtRIFbNBIsZNWpQh+76Vgl6WAPqK+qaubIiWSwexo120/QUIvUuqQ==; SPC_ST=.cGt6VDdQM0RYTk1UZ2RINJ8yHa9qrt6KuoLeuwvF9kzEj49hPquHPvdk2cdgAp448pNM8k/MRf1dHWJhxRxtLqderZoAXXI8OEQ24GdQ8iT6v3Jz/7D8G4Gc681j2jJBe7sEjopS07b6RUqVOGGp4kJG5sjeDlszqHtRIFbNBIsZNWpQh+76Vgl6WAPqK+qaubIiWSwexo120/QUIvUuqQ==',
+    'priority': 'u=0, i',
+    'sec-ch-ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+    'sec-fetch-dest': 'document',
+    'sec-fetch-mode': 'navigate',
+    'sec-fetch-site': 'none',
+    'sec-fetch-user': '?1',
+    'upgrade-insecure-requests': '1',
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    'Referer': 'https://shopee.vn/',
+    'Origin': 'https://shopee.vn',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    'content-length': '0',
+    'origin': 'https://shopee.vn',
+    'referer': 'https://shopee.vn/',
+    'attribution-reporting-eligible': 'event-source, trigger, not-navigation-source',
+    'attribution-reporting-support': 'web',
+    'purpose': 'prefetch',
+    'content-type': 'text/plain;charset=UTF-8',
+    'af-ac-enc-dat': 'bae9d4138fd44977',
+    'af-ac-enc-sz-token': 'BPw1Y/8Js7emqMh1dsO1JQ==|xvOQWD6SLsi/rVozd1rQLmcngK+mnVkclvshRnWvRkd6K6TXP1RuqhEQiqm4y7syG5rBT947Ny0LWQ==|YG6XHGp0JqEzAuYm|08|3',
+    'x-api-source': 'pc',
+    'x-csrftoken': 'qxk0XvFKHpXpw5BtpM5jgNjJF2EtvCPr',
+    'x-requested-with': 'XMLHttpRequest',
+    'x-sap-ri': '2d1a98661b4031b9f8153a3a03013a7be0ddedc6d9259ce8a35f',
+    'x-sap-sec': 'p5gAvMDReGDNSGDNHLD2SGlNHLDNSGlNSGDBSGDNrGlNSylBSGDRSGDNyypvghINSGA5ShDNZGnNSwL/T2dWyhKv+RD/PHXU1QSOdRxhdd7PoIyEfQbdSTXiC+eAvowJBOePt85uccdqShd8j/VPSjVVx9Ead0LdXE1M7GvUSsaGlUpafY2hKN+yGgVIdb4L9Ry5HrAtAJc06urDc8XgIFvdhdAPw3vv4n2I2fZtKf2pa5AcnEAMQzIH0PSrPSHA34tbaL2oH0Q9Wblcjjthks/OAOWY6dnX9VSrmRNFw63DUPYUJu7vmLiLPO7C+BFDaeLXUkCRJQs+nVVNzxFnJUlJdxOj5Q+QKnpzwOPkkbR/vzjp2LrA05Qhxtkk/6ZQO3N1aGU277SXkewfn6Z7oDqf8Je/oYssAt/Y9XgJG0fET5/YBzaFcS9eSwgtkEpGMuY34zgr3FGUFAWviSucwx4Tpo0Bw0Dp9Sslt83jjcnFiswj5q/3ksU08p8zq4gA8bISI+4HHOJHk+xgGEI+aFMXCj8jJ8EAlWJy/UZXG4Q/E0mOQlUVPKseZVugW0tbWz3/Ne2fvORVZ+hvPfjI9hvQzwPFUpuvdiYJhIcWoH88wJ9sxJVgeA+I/msxMbVokqqMM1fYQXP5Pz45tOWxTcKt+Sg/zUWld/OAL+AVN3ZzWoOdZOlGq9VxTCcHAgtunyFjoAfbTIhlnxh7/uToOb66wJr+V3DjW10vcliHNg6hJNxI/WgnDyDiI0Y4e5q1xf1tfJmrkvEljxt5Raay/rV3CK6xOzxOK3ZMzjdrw8+YVfAsgQA/wLKg9rGGbAs0E34XCQW8SYbwqKB4w7WvOJ8w3xpFUpiy7S8jem8ubTBVN3zF2cQjsDZBLtUa9P1SHj9ufw4+t6zVZYo27M6mNZdXzQVbSS5m+W3zw5/2qB504wQs+vEUlQfYTV1LoJ1AR6YL/9ZKnyUYuumVZwvVBhNUH4YhvZQkuxZ6EZAb97zdwZtxR4JBW+iIxKkfW9OIwG2MhKxQQRpswXGEoM4SwTySzbhEXsXGbR+fuPhdKCCxVPq7+/+haJHgXx9cYMZHY+ri/v/uvbacJJdcPE4mInHC3W2Lpa/E35I+I5L3IHIlBpRo7RyPpmv5YzeEZt5u/dEnnoZt5CLyqgSqUo0ouEB5J+zexea3AU33pCU6+Ok3YfDj3qzgGjqdRnQn8jWIiO40fpq/KEJTEr/DaW/m7YZSRuNyZ0rhVJqzhwzl7/toXPnKwbavQYQXLs2hF6cTZ+FBDgQqlhgbxZc4JNiXVfLFHKeYJukky+ToFpDxNjvHkV63aPhnyJI274avedzrBh1hmt32BlDHr8iAj//41whALoNLMLINSGDARYWWkq8gdhDNSGA6g42vEGDNSCQNSGD5SGDNOpH8ju3iH4Yx+ZGcL7utyfC/KqK2SGDNkHlFrHnukYfNSGDNEGD6SGINHGD2SGDNEGDNSCQNSGD5SGDN4PSeJNpP6lv9im4UHa5WukzYbdv2SGDNr6vWkbmykHnNSGDN',
+    'x-shopee-language': 'vi',
+    'x-sz-sdk-version': '1.10.9',
+    'if-none-match-': '55b03-7404008ec63e78568f7cc4f6f8a5ecc9',
+    'szdet': '1721244205989',
+    'sz-token': 'te2jAM9/Ffph3YcSlfgynw==|+/CQWD6SLsi/rVozd1rQLmcngK+mnVkclvshRg2xRkd6K6TXP1RuqhEQiqm4y7syG5rBT947Ny0LWw==|YG6XHGp0JqEzAuYm|08|3',
+    'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBfbmFtZSI6InBjLWNhcnQiLCJleHAiOjE3MjEyNDU5OTYsImlhdCI6MTcyMTI0NDE5NiwiaXNzIjoibWRhcCJ9.TybMz1IWym_znUvDxHql_naDPE5oEctQNrUR7MopFcI',
+    'access-control-request-headers': 'authorization,content-type',
+    'access-control-request-method': 'POST',
+    'x-spc-df': '7oS4o4C01NKit2JxpAbFcWzutA8rYM3S',
+    'Accept': '*/*' 
+            })
+    return session
+
+def find_session_details(obj):
+    if isinstance(obj, dict):
+        if 'session_id' in obj:
+            return {
+                'session_id': str(obj['session_id']),
+                'view_count': obj.get('view_count'),
+                'preview_image': obj.get('image') or obj.get('preview_image')
+            }
+        for key, value in obj.items():
+            result = find_session_details(value)
+            if result:
+                return result
+    return None
+
+async def scrape_url(url):
+    start = time.time()
+    try:
+        session = await get_session()
+        async with session.get(url, timeout=15) as response:
+            html = await response.text()
+        
+        script_match = re.search(r'<script[^>]*type=["\']text/mfe-initial-data["\'][^>]*>([\s\S]*?)<\/script>', html)
+        
+        if script_match:
+            try:
+                json_data = json.loads(script_match.group(1))
+                session_details = find_session_details(json_data)
+
+                if session_details:
+                    return {
+                        'url': url,
+                        **session_details,
+                        'time': round((time.time() - start) * 1000, 2)
+                    }
+                else:
+                    return {
+                        'url': url,
+                        'error': 'Không tìm thấy ID phiên trong dữ liệu JSON',
+                        'time': round((time.time() - start) * 1000, 2)
+                    }
+            except json.JSONDecodeError:
+                return {
+                    'url': url,
+                    'error': 'Lỗi khi phân tích dữ liệu JSON',
+                    'time': round((time.time() - start) * 1000, 2)
+                }
+        else:
+            return {
+                'url': url,
+                'error': 'Không tìm thấy thẻ script với loại yêu cầu',
+                'time': round((time.time() - start) * 1000, 2)
+            }
+    except Exception as e:
+        return {
+            'url': url,
+            'error': str(e),
+            'time': round((time.time() - start) * 1000, 2)
+        }
+
+async def send_long_message(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str):
+    MAX_MESSAGE_LENGTH = 4096
+    parts = [text[i:i+MAX_MESSAGE_LENGTH] for i in range(0, len(text), MAX_MESSAGE_LENGTH)]
+    for part in parts:
+        await update.message.reply_text(part)
+
+def format_result(res):
+    if 'session_id' in res:
+        return (f"✅ Phát hiện phiên Live:\n"
+                f"🔗 URL: {res['url']}\n"
+                f"🆔 Session ID: {res['session_id']}\n"
+                f"👁 Lượt xem: {res.get('view_count', 'Không có thông tin')}\n"
+                f"🖼 Ảnh preview: {res.get('preview_image', 'Không có')}\n"
+                f"⏱ Thời gian xử lý: {res['time']}ms\n"
+                f"🔴 Link phát trực tiếp: https://live.shopee.vn/share?from=live&session={res['session_id']}")
+    else:
+        return (f"❌ Không phát hiện phiên Live:\n"
+                f"🔗 URL: {res['url']}\n"
+                f"❗ Lỗi: {res.get('error', 'Không xác định')}\n"
+                f"⏱ Thời gian xử lý: {res['time']}ms")
+
+async def check_urls(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    urls = context.args
+
+    if not urls:
+        await update.message.reply_text('Vui lòng cung cấp một hoặc nhiều URL.')
+        return
+
+    tasks = [scrape_url(url) for url in urls]
+    results = await asyncio.gather(*tasks)
+
+    response_message = '\n\n'.join([format_result(res) for res in results])
+    
+    no_data_links = [res['url'] for res in results if 'error' in res and res['error'] == 'Không tìm thấy ID phiên trong dữ liệu JSON']
+    
+    await send_long_message(update, context, response_message)
+    
+    if no_data_links:
+        keyboard = [[InlineKeyboardButton("📋 Sao chép các liên kết không có dữ liệu", callback_data="copy_no_data")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("Một số liên kết không có dữ liệu. Nhấn nút bên dưới để sao chép:", reply_markup=reply_markup)
+        context.user_data['no_data_links'] = no_data_links
+
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    if query.data == "copy_no_data":
+        no_data_links = context.user_data.get('no_data_links', [])
+        if no_data_links:
+            links_text = "\n".join(no_data_links)
+            await query.message.reply_text(f"Đây là các liên kết không có dữ liệu:\n\n{links_text}")
+        else:
+            await query.message.reply_text("Không tìm thấy liên kết nào không có dữ liệu.")
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('Xin chào! Gửi cho tôi các URL bạn muốn kiểm tra bằng lệnh /check.')
+
+def main():
+    token = '7010785413:AAHo3-95sFfnzL7t_3OImoA1jT0ICHVCBDE'  # Token bot của bạn
+    application = Application.builder().token(token).build()
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("check", check_urls))
+    application.add_handler(CallbackQueryHandler(button_callback))
+
+    application.run_polling()
+
+if __name__ == '__main__':
+    main()
